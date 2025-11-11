@@ -1,4 +1,4 @@
-# R/batchcases.R  (updated)
+# R/batchcases.R
 
 #' New BatchCases query
 #' @export
@@ -64,7 +64,9 @@ bc_build_query <- function(q) {
 #' @export
 bc_debug_url <- function(q, endpoint = "/BatchCases") ln_build_url(endpoint, bc_build_query(q))
 
-# -------- basic fetch (no saving), kept ----------
+# ------------------------------------------------------------
+# plain fetch (no checkpoint) – unchanged
+# ------------------------------------------------------------
 #' Plain BatchCases fetch following @odata.nextLink
 #' @export
 bc_fetch <- function(q,
@@ -115,7 +117,9 @@ bc_fetch <- function(q,
   out
 }
 
-# ------------ XML helpers (same as before) -------------
+# ------------------------------------------------------------
+# XML helpers
+# ------------------------------------------------------------
 bc_find_inline_xml_col <- function(df) {
   cand <- grep("^(Document(\\.|$)|DocumentContent(\\.|$)).*(content$|^content$)|^DocumentContent$", names(df),
                value = TRUE, ignore.case = TRUE)
@@ -165,8 +169,14 @@ bc_collect_xml <- function(rows,
   dplyr::left_join(rows, dplyr::bind_rows(res), by = "ResultId")
 }
 
-# ---- tiny XML parser (keep it simple) ----
-txt1  <- function(node, xp) { n <- xml2::xml_find_first(node, xp); if (inherits(n,"xml_node")) xml2::xml_text(n, trim=TRUE) else NULL }
+# ------------------------------------------------------------
+# RICH XML PARSER (the big one)
+# ------------------------------------------------------------
+nz_or <- function(x, alt = NULL) if (!is.null(x) && length(x) && all(nchar(x) > 0)) x else alt
+txt1  <- function(node, xp) { n <- xml2::xml_find_first(node, xp); if (inherits(n, "xml_node")) xml2::xml_text(n, trim=TRUE) else NULL }
+txts  <- function(node, xp) { v <- xml2::xml_find_all(node, xp); if (length(v)) xml2::xml_text(v, trim=TRUE) else character(0) }
+attr1 <- function(node, xp, attr) { n <- xml2::xml_find_first(node, xp); if (inherits(n, "xml_node")) xml2::xml_attr(n, attr) else NULL }
+attrs <- function(node, xp, attr) { v <- xml2::xml_find_all(node, xp); if (length(v)) xml2::xml_attr(v, attr) else character(0) }
 null_if_empty <- function(x) if (is.null(x)) NULL else if (is.atomic(x) && length(x)==0) NULL else if (is.list(x) && !length(x)) NULL else x
 
 parse_case_xml_rich <- function(xml_str) {
@@ -174,6 +184,7 @@ parse_case_xml_rich <- function(xml_str) {
   doc <- tryCatch(xml2::read_xml(xml_str), error = function(e) NULL)
   if (is.null(doc)) return(NULL)
 
+  # Atom-wrapped or bare courtCaseDoc
   entry <- xml2::xml_find_first(doc, "/*[local-name()='entry']")
   if (inherits(entry, "xml_node")) {
     ccd <- xml2::xml_find_first(entry, "./*[local-name()='content']/*[1]")
@@ -183,15 +194,156 @@ parse_case_xml_rich <- function(xml_str) {
     entry <- doc
   }
 
+  # Atom part
   atom_id   <- txt1(entry, "./*[local-name()='id']")
   atom_ttl  <- txt1(entry, "./*[local-name()='title']")
+  atom_pub  <- txt1(entry, "./*[local-name()='published']")
+  atom_upd  <- txt1(entry, "./*[local-name()='updated']")
+
+  # dc-ish identifiers
+  dc_src  <- txt1(entry, ".//*[local-name()='source']")
+  dc_date <- txt1(entry, ".//*[local-name()='date']")
+  dc_identifiers <- txts(entry, ".//*[local-name()='identifier']")
+  pguid <- NULL; lni <- NULL
+  if (length(dc_identifiers)) {
+    pguid <- nz_or(dc_identifiers[grepl("^PGUID:", dc_identifiers)], NULL)
+    lni   <- nz_or(dc_identifiers[grepl("^LNI:",   dc_identifiers)], NULL)
+    if (length(pguid)) pguid <- sub("^PGUID:\\s*", "", pguid[1])
+    if (length(lni))   lni   <- sub("^LNI:\\s*",   "", lni[1])
+  }
+
+  # case info
+  case_name_node <- xml2::xml_find_first(ccd, ".//*[local-name()='caseInfo']/*[local-name()='caseName']")
+  full_names <- txts(case_name_node, "./*[local-name()='fullCaseName']")
+  short_name <- txt1(case_name_node, "./*[local-name()='shortCaseName']")
+  dockets    <- txts(ccd, ".//*[local-name()='docketNumber']")
+
+  court_name <- txt1(ccd, ".//*[local-name()='courtInfo']/*[local-name()='courtName']")
+  juris_name <- txt1(ccd, ".//*[local-name()='courtInfo']//*[local-name()='jurisSystem']")
+  juris_norm <- attr1(ccd, ".//*[local-name()='courtInfo']//*[local-name()='jurisSystem']", "normalized")
+
+  # dates
+  decision_date_norm <- attr1(ccd, ".//*[local-name()='decisionDate']", "normalizedDate")
+  decision_date_disp <- txt1(ccd,   ".//*[local-name()='decisionDate']")
+  argued_date_norm   <- attr1(ccd, ".//*[local-name()='arguedDate']", "normalizedDate")
+  argued_date_disp   <- txt1(ccd,   ".//*[local-name()='arguedDate']")
+
+  # citations
+  cite_nodes <- xml2::xml_find_all(ccd, ".//*[local-name()='citeForThisResource']")
+  citations <- purrr::map(cite_nodes, function(n){
+    list(
+      scheme = xml2::xml_attr(n, "pageScheme"),
+      key    = xml2::xml_attr(n, "citeDefinition"),
+      text   = xml2::xml_text(n, trim = TRUE)
+    )
+  })
+
+  # history
+  hist_nodes <- xml2::xml_find_all(ccd, ".//*[local-name()='caseHistory']//*[local-name()='citation']")
+  history <- purrr::map(hist_nodes, function(n){
+    list(
+      type = xml2::xml_attr(n, "type"),
+      text = xml2::xml_text(n, trim = TRUE)
+    )
+  })
+
+  # judges (dedup)
+  judge_nodes <- xml2::xml_find_all(ccd, ".//*[local-name()='panel']//*[local-name()='judge']")
+  judges <- purrr::map(judge_nodes, function(n){
+    nm <- txt1(n, ".//*[local-name()='nameText' or local-name()='name' or local-name()='fullName']") %||%
+      txt1(n, "./*[local-name()='person']/*[local-name()='nameText']") %||%
+      xml2::xml_text(n, trim = TRUE)
+    nm <- trimws(nm)
+    role <- xml2::xml_attr(n, "role") %||% txt1(n, ".//*[local-name()='role']")
+    list(name = if (nzchar(nm)) nm else NULL, role = role)
+  })
+  judges <- purrr::compact(judges)
+  if (length(judges)) {
+    dfj <- tibble::as_tibble(do.call(rbind, lapply(judges, as.data.frame)))
+    dfj <- dfj %>% dplyr::distinct(name, .keep_all = TRUE)
+    judges <- split(dfj, seq_len(nrow(dfj))) %>% lapply(as.list)
+  } else judges <- NULL
+
+  # counsel
+  counsel_nodes <- xml2::xml_find_all(ccd, ".//*[local-name()='representation']//*[local-name()='counselor']")
+  counsel <- purrr::map(counsel_nodes, function(n){
+    list(
+      name = xml2::xml_text(n, trim=TRUE),
+      side = xml2::xml_attr(n, "side")
+    )
+  })
+
+  # opinions
+  opinion_nodes <- xml2::xml_find_all(ccd, ".//*[local-name()='caseOpinions']/*[local-name()='opinion']")
+  opinions <- purrr::map(opinion_nodes, function(op){
+    op_type <- xml2::xml_attr(op, "type")
+    op_by   <- txt1(op, "./*[local-name()='caseOpinionBy']")
+    p_nodes <- xml2::xml_find_all(op, ".//*[local-name()='bodyText']/*[local-name()='p']")
+    paragraphs <- purrr::map(seq_along(p_nodes), function(i){
+      p <- p_nodes[[i]]
+      list(
+        seq    = i,
+        id     = xml2::xml_attr(p, "anchor"),
+        text   = xml2::xml_text(p, trim=TRUE),
+        pages  = purrr::map(xml2::xml_find_all(p, ".//*[local-name()='page']"), function(pg) {
+          list(
+            scheme = xml2::xml_attr(pg, "paginationScheme"),
+            num    = xml2::xml_attr(pg, "number")
+          )
+        }),
+        cites  = xml2::xml_text(xml2::xml_find_all(p, ".//*[local-name()='citation']"), trim=TRUE)
+      )
+    })
+    fn_nodes <- xml2::xml_find_all(op, ".//*[local-name()='footnote']")
+    footnotes <- purrr::map(fn_nodes, function(fn){
+      list(
+        id    = xml2::xml_attr(fn, "anchor"),
+        label = txt1(fn, "./*[local-name()='label']"),
+        text  = txt1(fn, "./*[local-name()='bodyText']")
+      )
+    })
+    list(type = op_type, by = op_by, paragraphs = paragraphs, footnotes = footnotes)
+  })
+
+  # pagination + classifications
+  pg_schemes <- attrs(ccd, ".//*[local-name()='pagination']/*[local-name()='paginationScheme']", "name")
+  class_items <- xml2::xml_find_all(ccd, ".//*[local-name()='classificationGroup']//*[local-name()='classItem']")
+  classifications <- purrr::map(class_items, function(ci){
+    list(code = xml2::xml_attr(ci, "code"), text = xml2::xml_text(ci, trim=TRUE))
+  })
 
   list(
     atom = list(
-      id    = atom_id,
-      title = atom_ttl
+      id        = atom_id,
+      title     = atom_ttl,
+      published = atom_pub,
+      updated   = atom_upd
     ),
-    raw  = xml_str
+    identifiers = list(
+      result_id = atom_id,
+      pguid     = pguid,
+      lni       = lni,
+      source    = dc_src,
+      dc_date   = dc_date
+    ),
+    case = list(
+      full_case_name = null_if_empty(full_names),
+      short_name     = short_name,
+      dockets        = null_if_empty(dockets),
+      court          = court_name,
+      jurisdiction   = list(name = juris_name, normalized = juris_norm),
+      dates = list(
+        decision = list(normalized = decision_date_norm, display = decision_date_disp),
+        argued   = list(normalized = argued_date_norm,   display = argued_date_disp)
+      ),
+      citations      = null_if_empty(citations),
+      history        = null_if_empty(history),
+      judges         = null_if_empty(judges),
+      counsel        = null_if_empty(counsel),
+      opinions       = null_if_empty(opinions),
+      pagination_schemes = null_if_empty(pg_schemes),
+      classifications    = null_if_empty(classifications)
+    )
   )
 }
 
@@ -199,20 +351,28 @@ parse_case_xml_rich <- function(xml_str) {
 #' @export
 cases_to_idkeyed_json <- function(df, id_col = "ResultId", xml_col = "xml",
                                   pretty = TRUE, auto_unbox = TRUE) {
+  stopifnot(id_col %in% names(df), xml_col %in% names(df))
   ids  <- df[[id_col]]
   xmls <- df[[xml_col]]
   parsed <- purrr::map(xmls, parse_case_xml_rich)
   out_list <- list()
   for (i in seq_along(ids)) {
     rid <- ids[[i]]
+    if (!nzchar(rid)) next
     pj  <- parsed[[i]]
     if (is.null(pj)) next
+    # ensure we always have an identifier
+    if (is.null(pj$identifiers$result_id) || !nzchar(pj$identifiers$result_id %||% "")) {
+      pj$identifiers$result_id <- rid
+    }
     out_list[[rid]] <- pj
   }
   jsonlite::toJSON(out_list, auto_unbox = auto_unbox, pretty = pretty, null = "null")
 }
 
-# ------------- RESUMABLE (pages + checkpoint) --------------
+# ------------------------------------------------------------
+# RESUMABLE FETCH (pages + checkpoint)
+# ------------------------------------------------------------
 #' Resumable / checkpointed BatchCases fetch (rows only)
 #' Saves to BatchCases/<search>/
 #' @export
@@ -329,7 +489,9 @@ bc_fetch_resumable_auto <- function(q,
   out
 }
 
-# ------------- NEW: full run that also writes JSON in the same folder ----------
+# ------------------------------------------------------------
+# full run: fetch → merge pages → XML → JSON → save
+# ------------------------------------------------------------
 #' Resumable BatchCases: fetch → XML → JSON, all saved under BatchCases/<search>/
 #' @export
 bc_run_resumable_auto <- function(q,
@@ -349,8 +511,8 @@ bc_run_resumable_auto <- function(q,
   out_dir     <- file.path(base_dir, safe_search)
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-  # 1) get / resume rows
-  rows <- bc_fetch_resumable_auto(
+  # 1) fetch / resume
+  bc_fetch_resumable_auto(
     q,
     page_sleep  = page_sleep,
     sleep_after = sleep_after,
@@ -361,7 +523,7 @@ bc_run_resumable_auto <- function(q,
     base_dir    = base_dir
   )
 
-  # 2) combine all saved pages so we can fetch XML for everything we have
+  # 2) load ALL pages we have so far
   page_files <- list.files(out_dir, pattern = "^page_\\d+\\.rds$", full.names = TRUE)
   all_rows <- lapply(page_files, readRDS)
   all_rows <- dplyr::bind_rows(all_rows)
@@ -371,10 +533,10 @@ bc_run_resumable_auto <- function(q,
     return(all_rows)
   }
 
-  # 3) fetch XML (inline or mediaReadLink)
+  # 3) fetch XML
   all_rows_xml <- bc_collect_xml(all_rows,
-                                 parallel = parallel_xml,
-                                 workers  = workers,
+                                 parallel   = parallel_xml,
+                                 workers    = workers,
                                  page_sleep = page_sleep)
 
   # 4) parse to JSON
@@ -383,7 +545,7 @@ bc_run_resumable_auto <- function(q,
                                      id_col = "ResultId",
                                      xml_col = "xml")
 
-  # 5) write JSON inside the same folder, name = query
+  # 5) write JSON inside that folder, named after query
   json_path <- file.path(out_dir, paste0(safe_search, "_id_keyed.json"))
   writeLines(json_blob, json_path)
 
