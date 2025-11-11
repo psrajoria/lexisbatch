@@ -2,7 +2,7 @@
 % Please edit documentation in R/batchcases.R
 \name{bc_fetch_resumable_auto}
 \alias{bc_fetch_resumable_auto}
-\title{Resumable / checkpointed BatchCases fetch (IDs/rows only)
+\title{Resumable / checkpointed BatchCases fetch (rows only)
 Saves to BatchCases/\if{html}{\out{<search>}}/}
 \usage{
 bc_fetch_resumable_auto(
@@ -17,6 +17,6 @@ bc_fetch_resumable_auto(
 )
 }
 \description{
-Resumable / checkpointed BatchCases fetch (IDs/rows only)
+Resumable / checkpointed BatchCases fetch (rows only)
 Saves to BatchCases/\if{html}{\out{<search>}}/
 }

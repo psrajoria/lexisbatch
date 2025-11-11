@@ -6,7 +6,7 @@
 \usage{
 bc_collect_xml(
   rows,
-  parallel = TRUE,
+  parallel = FALSE,
   workers = max(1, parallel::detectCores() - 1),
   page_sleep = 0
 )
