@@ -1,1 +1,9 @@
 .Rproj.user
+
+BatchNews/
+.Rhistory
+.RData
+.Ruserdata
+code_usage.Rmd
+
+code_usage.nb.html
