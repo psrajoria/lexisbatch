@@ -2,8 +2,9 @@
 % Please edit documentation in R/batchdockets.R
 \name{bd_run_full_resumable}
 \alias{bd_run_full_resumable}
-\title{Resumable fetch for BatchDockets (IDs → XML → JSON)
-Saves into BatchDockets/\if{html}{\out{<search>}}/}
+\title{Resumable BatchDockets: IDs → XML → JSON
+Saves to BatchDockets/\if{html}{\out{<search>}}/
+JSON file will be \if{html}{\out{<search>}}_id_keyed.json}
 \usage{
 bd_run_full_resumable(
   q,
@@ -15,11 +16,11 @@ bd_run_full_resumable(
   verbose = TRUE,
   parallel_xml = FALSE,
   workers = max(1, parallel::detectCores() - 1),
-  base_dir = "BatchDockets",
-  write_json = TRUE
+  base_dir = "BatchDockets"
 )
 }
 \description{
-Resumable fetch for BatchDockets (IDs → XML → JSON)
-Saves into BatchDockets/\if{html}{\out{<search>}}/
+Resumable BatchDockets: IDs → XML → JSON
+Saves to BatchDockets/\if{html}{\out{<search>}}/
+JSON file will be \if{html}{\out{<search>}}_id_keyed.json
 }
