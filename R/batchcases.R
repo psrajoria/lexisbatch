@@ -1,4 +1,25 @@
 # R/batchcases.R
+# BatchCases → resumable → XML → rich JSON
+# saves under: BatchCases/<search>/...
+
+# small locals used in several funcs ---------------------------------
+safe_read_rds <- function(path) {
+  if (file.exists(path)) {
+    tryCatch(readRDS(path), error = function(e) NULL)
+  } else {
+    NULL
+  }
+}
+
+make_safe_name <- function(x) {
+  if (is.null(x) || !nzchar(x)) return("no_search")
+  x <- gsub("[^A-Za-z0-9._-]+", "_", x)
+  substr(x, 1, 80)
+}
+
+# ============================================================
+# QUERY BUILDERS
+# ============================================================
 
 #' New BatchCases query
 #' @export
@@ -64,9 +85,10 @@ bc_build_query <- function(q) {
 #' @export
 bc_debug_url <- function(q, endpoint = "/BatchCases") ln_build_url(endpoint, bc_build_query(q))
 
-# ------------------------------------------------------------
-# plain fetch (no checkpoint) – unchanged
-# ------------------------------------------------------------
+# ============================================================
+# PLAIN FETCH (NO CHECKPOINT)
+# ============================================================
+
 #' Plain BatchCases fetch following @odata.nextLink
 #' @export
 bc_fetch <- function(q,
@@ -117,9 +139,10 @@ bc_fetch <- function(q,
   out
 }
 
-# ------------------------------------------------------------
-# XML helpers
-# ------------------------------------------------------------
+# ============================================================
+# XML HELPERS
+# ============================================================
+
 bc_find_inline_xml_col <- function(df) {
   cand <- grep("^(Document(\\.|$)|DocumentContent(\\.|$)).*(content$|^content$)|^DocumentContent$", names(df),
                value = TRUE, ignore.case = TRUE)
@@ -169,9 +192,10 @@ bc_collect_xml <- function(rows,
   dplyr::left_join(rows, dplyr::bind_rows(res), by = "ResultId")
 }
 
-# ------------------------------------------------------------
-# RICH XML PARSER (the big one)
-# ------------------------------------------------------------
+# ============================================================
+# RICH XML PARSER (FIXED: no %>%)
+# ============================================================
+
 nz_or <- function(x, alt = NULL) if (!is.null(x) && length(x) && all(nchar(x) > 0)) x else alt
 txt1  <- function(node, xp) { n <- xml2::xml_find_first(node, xp); if (inherits(n, "xml_node")) xml2::xml_text(n, trim=TRUE) else NULL }
 txts  <- function(node, xp) { v <- xml2::xml_find_all(node, xp); if (length(v)) xml2::xml_text(v, trim=TRUE) else character(0) }
@@ -247,7 +271,7 @@ parse_case_xml_rich <- function(xml_str) {
     )
   })
 
-  # judges (dedup)
+  # judges (dedup, NO %>%)
   judge_nodes <- xml2::xml_find_all(ccd, ".//*[local-name()='panel']//*[local-name()='judge']")
   judges <- purrr::map(judge_nodes, function(n){
     nm <- txt1(n, ".//*[local-name()='nameText' or local-name()='name' or local-name()='fullName']") %||%
@@ -260,9 +284,11 @@ parse_case_xml_rich <- function(xml_str) {
   judges <- purrr::compact(judges)
   if (length(judges)) {
     dfj <- tibble::as_tibble(do.call(rbind, lapply(judges, as.data.frame)))
-    dfj <- dfj %>% dplyr::distinct(name, .keep_all = TRUE)
-    judges <- split(dfj, seq_len(nrow(dfj))) %>% lapply(as.list)
-  } else judges <- NULL
+    dfj <- dplyr::distinct(dfj, name, .keep_all = TRUE)
+    judges <- lapply(seq_len(nrow(dfj)), function(i) as.list(dfj[i, , drop = FALSE]))
+  } else {
+    judges <- NULL
+  }
 
   # counsel
   counsel_nodes <- xml2::xml_find_all(ccd, ".//*[local-name()='representation']//*[local-name()='counselor']")
@@ -361,7 +387,6 @@ cases_to_idkeyed_json <- function(df, id_col = "ResultId", xml_col = "xml",
     if (!nzchar(rid)) next
     pj  <- parsed[[i]]
     if (is.null(pj)) next
-    # ensure we always have an identifier
     if (is.null(pj$identifiers$result_id) || !nzchar(pj$identifiers$result_id %||% "")) {
       pj$identifiers$result_id <- rid
     }
@@ -370,9 +395,10 @@ cases_to_idkeyed_json <- function(df, id_col = "ResultId", xml_col = "xml",
   jsonlite::toJSON(out_list, auto_unbox = auto_unbox, pretty = pretty, null = "null")
 }
 
-# ------------------------------------------------------------
+# ============================================================
 # RESUMABLE FETCH (pages + checkpoint)
-# ------------------------------------------------------------
+# ============================================================
+
 #' Resumable / checkpointed BatchCases fetch (rows only)
 #' Saves to BatchCases/<search>/
 #' @export
@@ -489,9 +515,10 @@ bc_fetch_resumable_auto <- function(q,
   out
 }
 
-# ------------------------------------------------------------
-# full run: fetch → merge pages → XML → JSON → save
-# ------------------------------------------------------------
+# ============================================================
+# FULL RUN (fetch → load pages → XML → JSON → write)
+# ============================================================
+
 #' Resumable BatchCases: fetch → XML → JSON, all saved under BatchCases/<search>/
 #' @export
 bc_run_resumable_auto <- function(q,
@@ -511,7 +538,7 @@ bc_run_resumable_auto <- function(q,
   out_dir     <- file.path(base_dir, safe_search)
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-  # 1) fetch / resume
+  # 1) fetch / resume (this will create pages + checkpoint)
   bc_fetch_resumable_auto(
     q,
     page_sleep  = page_sleep,
@@ -523,7 +550,7 @@ bc_run_resumable_auto <- function(q,
     base_dir    = base_dir
   )
 
-  # 2) load ALL pages we have so far
+  # 2) load ALL pages we currently have for this query
   page_files <- list.files(out_dir, pattern = "^page_\\d+\\.rds$", full.names = TRUE)
   all_rows <- lapply(page_files, readRDS)
   all_rows <- dplyr::bind_rows(all_rows)
@@ -545,7 +572,7 @@ bc_run_resumable_auto <- function(q,
                                      id_col = "ResultId",
                                      xml_col = "xml")
 
-  # 5) write JSON inside that folder, named after query
+  # 5) write JSON inside the same folder, named after the query
   json_path <- file.path(out_dir, paste0(safe_search, "_id_keyed.json"))
   writeLines(json_blob, json_path)
 

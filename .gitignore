@@ -6,5 +6,6 @@ BatchCases/
 .RData
 .Ruserdata
 code_usage.Rmd
+.Rhistory
 
 code_usage.nb.html
