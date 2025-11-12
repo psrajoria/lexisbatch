@@ -1,0 +1,354 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={R Notebook},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{R Notebook}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# install.packages("devtools")}
+\NormalTok{devtools}\SpecialCharTok{::}\FunctionTok{install\_github}\NormalTok{(}\StringTok{"psrajoria/lexisbatch"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Skipping install of 'lexisbatch' from a github remote, the SHA1 (f2a508d7) has not changed since last install.
+##   Use `force = TRUE` to force installation
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(lexisbatch)}
+\end{Highlighting}
+\end{Shaded}
+
+🔑 Authentication
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# 1 Using environment variables (recommended)}
+
+\CommentTok{\#Sys.setenv(LEXIS\_CLIENT\_ID = "your{-}client{-}id")}
+\CommentTok{\#Sys.setenv(LEXIS\_CLIENT\_SECRET = "your{-}client{-}secret")}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{lexis\_auth\_env}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# 2 Inline (directly in code)}
+
+\CommentTok{\# lexis\_auth("your{-}client{-}id", "your{-}client{-}secret")}
+\end{Highlighting}
+\end{Shaded}
+
+📁 Output structure
+
+All resumable functions store data under the working directory:
+BatchNews// BatchCases// BatchDockets//
+
+Each folder contains: checkpoint.rds page\_001.rds page\_002.rds
+\ldots{} BatchCases\_id\_keyed.json
+
+📰 BatchNews Example
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(lexisbatch)}
+\FunctionTok{lexis\_auth\_env}\NormalTok{()}
+
+\CommentTok{\# Build query}
+\NormalTok{q }\OtherTok{\textless{}{-}} \FunctionTok{bn\_new}\NormalTok{() }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bn\_search}\NormalTok{(}\StringTok{"title(theranos OR elizabeth holmes)"}\NormalTok{) }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bn\_filter\_date}\NormalTok{(}\StringTok{"2009{-}01{-}01"}\NormalTok{, }\StringTok{"2015{-}10{-}20"}\NormalTok{) }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bn\_expand}\NormalTok{(}\AttributeTok{document =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bn\_top}\NormalTok{(}\DecValTok{50}\NormalTok{)}
+
+\CommentTok{\# Debug final URL}
+\FunctionTok{bn\_debug\_url}\NormalTok{(q)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "https://services-api.lexisnexis.com/v1/BatchNews?%24search=title%28theranos%20OR%20elizabeth%20holmes%29&%24select=ResultId%2CTitle%2CDate&%24filter=Date%20ge%202009-01-01%20and%20Date%20le%202015-10-20&%24expand=Document&%24top=50&%24count=true"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Fetch automatically with checkpointing}
+\NormalTok{news }\OtherTok{\textless{}{-}} \FunctionTok{bn\_fetch\_resumable\_auto}\NormalTok{(q)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Resuming with 331 seen ids.
+\end{verbatim}
+
+\begin{verbatim}
+##   | Page 1 (raw 50, new 0) | cum new=331/331
+\end{verbatim}
+
+\begin{verbatim}
+##   | Page 2 (raw 50, new 0) | cum new=331/331
+\end{verbatim}
+
+\begin{verbatim}
+##   | Page 3 (raw 50, new 0) | cum new=331/331
+\end{verbatim}
+
+\begin{verbatim}
+##   | Page 4 (raw 50, new 0) | cum new=331/331
+\end{verbatim}
+
+\begin{verbatim}
+##   | Page 5 (raw 50, new 0) | cum new=331/331
+\end{verbatim}
+
+\begin{verbatim}
+##   | Page 6 (raw 50, new 0) | cum new=331/331
+\end{verbatim}
+
+\begin{verbatim}
+##   | Page 7 (raw 31, new 0) | cum new=331/331
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Output stored in:}
+\CommentTok{\# BatchNews/title\_theranos\_OR\_elizabeth\_holmes/}
+\end{Highlighting}
+\end{Shaded}
+
+If the process stops or fails mid-run, just re-run:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# news \textless{}{-} bn\_fetch\_resumable\_auto(q)}
+\end{Highlighting}
+\end{Shaded}
+
+It will resume from the last saved page automatically.
+
+⚖️ BatchCases Example
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(lexisbatch)}
+\FunctionTok{lexis\_auth\_env}\NormalTok{()}
+
+\NormalTok{q }\OtherTok{\textless{}{-}} \FunctionTok{bc\_new}\NormalTok{() }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bc\_search}\NormalTok{(}\StringTok{"roe vs wade"}\NormalTok{) }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bc\_filter\_date}\NormalTok{(}\StringTok{"1965{-}01{-}01"}\NormalTok{,}\StringTok{"1980{-}12{-}31"}\NormalTok{) }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bc\_expand}\NormalTok{(}\AttributeTok{document =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bc\_top}\NormalTok{(}\DecValTok{50}\NormalTok{)}
+
+\FunctionTok{bc\_run\_resumable\_auto}\NormalTok{(q)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Resuming BatchCases with 11 seen ids.
+\end{verbatim}
+
+\begin{verbatim}
+##   | Page 1 (raw 11, new 0) | seen=11/11
+\end{verbatim}
+
+\begin{verbatim}
+## == Using inline XML from column: Document.Content
+\end{verbatim}
+
+\begin{verbatim}
+## == Parsing XML → JSON ...
+\end{verbatim}
+
+\begin{verbatim}
+## # A tibble: 11 x 9
+##    ResultId               Title Date  Document.DocumentId Document.DocumentIdT~1
+##    <chr>                  <chr> <chr> <chr>               <chr>                 
+##  1 urn:contentItem:3S4X-~ ""    1973~ /shared/document/c~ DocFullPath           
+##  2 urn:contentItem:3S4X-~ ""    1973~ /shared/document/c~ DocFullPath           
+##  3 urn:contentItem:3S4V-~ ""    1970~ /shared/document/c~ DocFullPath           
+##  4 urn:contentItem:3S4X-~ ""    1971~ /shared/document/c~ DocFullPath           
+##  5 urn:contentItem:3S4X-~ ""    1971~ /shared/document/c~ DocFullPath           
+##  6 urn:contentItem:3S4X-~ ""    1972~ /shared/document/c~ DocFullPath           
+##  7 urn:contentItem:3S4X-~ ""    1971~ /shared/document/c~ DocFullPath           
+##  8 urn:contentItem:3S4X-~ ""    1971~ /shared/document/c~ DocFullPath           
+##  9 urn:contentItem:3S4X-~ ""    1971~ /shared/document/c~ DocFullPath           
+## 10 urn:contentItem:3S4X-~ ""    1972~ /shared/document/c~ DocFullPath           
+## 11 urn:contentItem:3S3J-~ ""    1968~ /shared/document/c~ DocFullPath           
+## # i abbreviated name: 1: Document.DocumentIdType
+## # i 4 more variables: Document.Content <chr>, Document.Citation <chr>,
+## #   Document.GenAIEnabled <lgl>, xml <chr>
+\end{verbatim}
+
+📜 BatchDockets Example
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(lexisbatch)}
+\FunctionTok{lexis\_auth\_env}\NormalTok{()}
+
+\NormalTok{qd }\OtherTok{\textless{}{-}} \FunctionTok{bd\_new}\NormalTok{() }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bd\_search}\NormalTok{(}\StringTok{"1:22cv859"}\NormalTok{) }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bd\_filter\_date}\NormalTok{(}\StringTok{"2022{-}01{-}01"}\NormalTok{,}\StringTok{"2022{-}12{-}31"}\NormalTok{) }\SpecialCharTok{|\textgreater{}}
+  \FunctionTok{bd\_top}\NormalTok{(}\DecValTok{50}\NormalTok{)}
+
+
+\NormalTok{dck }\OtherTok{\textless{}{-}} \FunctionTok{bd\_run\_full\_resumable}\NormalTok{(qd)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Resuming dockets with 21 seen IDs.
+\end{verbatim}
+
+\begin{verbatim}
+## [DEBUG URL] https://services-api.lexisnexis.com/v1/BatchDockets?%24search=1%3A22cv859&%24select=ResultId&%24filter=Date%20ge%202022-01-01T00%3A00%3A00Z%20and%20Date%20le%202022-12-31T23%3A59%3A59Z&%24top=50&%24count=true
+\end{verbatim}
+
+\begin{verbatim}
+##   | IDs page 1 | raw=21, new=0, seen now=21/21
+\end{verbatim}
+
+\begin{verbatim}
+## No new IDs → no new XML to fetch.
+\end{verbatim}
+
+\begin{verbatim}
+## == Parsing XML → JSON for all saved dockets ...
+\end{verbatim}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+🧠 Common Parameters Argument Description page\_sleep Pause between API
+pages to respect rate limits retry, retry\_wait Retry on HTTP
+429/500/503 fetch\_xml Whether to download XML documents parse\_xml
+Whether to parse XML into JSON parallel\_xml Fetch XML concurrently
+using furrr workers Number of parallel workers base\_dir Custom output
+folder write\_json File path to save parsed JSON
+
+💾 Reading saved data
+
+You can reload data at any time:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{rows }\OtherTok{\textless{}{-}} \FunctionTok{readRDS}\NormalTok{(}\StringTok{"BatchNews/title\_theranos\_OR\_elizabeth\_holmes\_/page\_001.rds"}\NormalTok{)}
+\NormalTok{json }\OtherTok{\textless{}{-}}\NormalTok{ jsonlite}\SpecialCharTok{::}\FunctionTok{read\_json}\NormalTok{(}\StringTok{"BatchCases/roe\_vs\_wade/roe\_vs\_wade\_id\_keyed.json"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+
+\end{document}
